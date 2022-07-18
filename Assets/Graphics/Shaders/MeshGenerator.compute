@@ -1,0 +1,64 @@
+#pragma kernel Generate
+#include <Table.compute>
+
+RWStructuredBuffer<float> densities;
+
+AppendStructuredBuffer<float> vertices;
+
+[numthreads(4,16,4)]
+void Generate (uint3 id : SV_DispatchThreadID)
+{
+
+    int3 cornerCoords[8];
+    cornerCoords[0] = id + int3(0, 0, 0);
+    cornerCoords[1] = id + int3(1, 0, 0);
+    cornerCoords[2] = id + int3(1, 0, 1);
+    cornerCoords[3] = id + int3(0, 0, 1);
+    cornerCoords[4] = id + int3(0, 1, 0);
+    cornerCoords[5] = id + int3(1, 1, 0);
+    cornerCoords[6] = id + int3(1, 1, 1);
+    cornerCoords[7] = id + int3(0, 1, 1);
+
+    
+    int cubeConfiguration = 0;
+
+    for (int j = 0; j < 8; j++)
+    {
+        if (densities[cornerCoords[j].z * 128 * 16 + cornerCoords[j].y * 16 + cornerCoords[j].x] < 0.7f)
+        {
+            cubeConfiguration |= 1 << j;
+        }
+    }
+
+    int edgeIndices[] = triangulation[cubeConfiguration];
+
+    for (int i = 0; i < 16; i+=3)
+    {
+        if (edgeIndices[i] == -1)
+            break;
+
+        int edgeIndexA = edgeIndices[i];
+        int a0 = cornerIndexAFromEdge[edgeIndexA];
+        int a1 = cornerIndexBFromEdge[edgeIndexA];
+
+        int edgeIndexB = edgeIndices[i+1];
+        int b0 = cornerIndexAFromEdge[edgeIndexB];
+        int b1 = cornerIndexBFromEdge[edgeIndexB];
+
+        int edgeIndexC = edgeIndices[i+2];
+        int c0 = cornerIndexAFromEdge[edgeIndexC];
+        int c1 = cornerIndexBFromEdge[edgeIndexC];
+
+        vertices.Append(float(cornerCoords[a0].x + cornerCoords[a1].x) / 2);
+        vertices.Append(float(cornerCoords[a0].y + cornerCoords[a1].y) / 2);
+        vertices.Append(float(cornerCoords[a0].z + cornerCoords[a1].z) / 2);
+
+        vertices.Append(float(cornerCoords[b0].x + cornerCoords[b1].x) / 2);
+        vertices.Append(float(cornerCoords[b0].y + cornerCoords[b1].y) / 2);
+        vertices.Append(float(cornerCoords[b0].z + cornerCoords[b1].z) / 2);
+
+        vertices.Append(float(cornerCoords[c0].x + cornerCoords[c1].x) / 2);
+        vertices.Append(float(cornerCoords[c0].y + cornerCoords[c1].y) / 2);
+        vertices.Append(float(cornerCoords[c0].z + cornerCoords[c1].z) / 2);
+    }
+}
